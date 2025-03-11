@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Delta Neutral Portfolio{% endblock %}
+
+{% block header %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <!-- Portfolio Delta Summary -->
+    <div id="delta-card" class="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+        <h3 class="text-lg font-semibold mb-2">Portfolio Delta</h3>
+        <div class="text-3xl font-bold" id="portfolio-delta">{{ summary.total_delta|round(2) }}</div>
+        <div class="flex items-center mt-2">
+            <span id="delta-status" class="{% if summary.is_delta_neutral %}bg-green-200 text-green-800{% else %}bg-yellow-200 text-yellow-800{% endif %} px-2 py-1 rounded-full text-xs font-semibold">
+                {% if summary.is_delta_neutral %}Delta Neutral{% else %}Needs Adjustment{% endif %}
+            </span>
+        </div>
+    </div>
+    
+    <!-- Option Positions -->
+    <div class="card bg-gradient-to-br from-indigo-500 to-indigo-600 text-white">
+        <h3 class="text-lg font-semibold mb-2">Option Positions</h3>
+        <div class="text-3xl font-bold" id="option-count">{{ summary.option_count }}</div>
+        <p class="text-indigo-100">Positions</p>
+        <div class="text-2xl font-bold mt-1" id="option-value">{{ summary.option_value|round(2) }}</div>
+        <p class="text-indigo-100">Value</p>
+    </div>
+    
+    <!-- Underlying Positions -->
+    <div class="card bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+        <h3 class="text-lg font-semibold mb-2">Underlying Positions</h3>
+        <div class="text-3xl font-bold" id="underlying-count">{{ summary.underlying_count }}</div>
+        <p class="text-purple-100">Positions</p>
+        <div class="text-2xl font-bold mt-1" id="underlying-value">{{ summary.underlying_value|round(2) }}</div>
+        <p class="text-purple-100">Value</p>
+    </div>
+    
+    <!-- Total Portfolio Value -->
+    <div class="card bg-gradient-to-br from-green-500 to-green-600 text-white">
+        <h3 class="text-lg font-semibold mb-2">Total Portfolio Value</h3>
+        <div class="text-3xl font-bold" id="total-value">{{ summary.total_value|round(2) }}</div>
+        <p class="text-green-100">Combined Value</p>
+    </div>
+</div>
+
+<!-- Hedge Recommendation -->
+<div id="hedge-recommendation" class="card mb-6">
+    <h3 class="text-xl font-semibold mb-4">Hedge Recommendation</h3>
+    <div id="recommendation-content" class="p-4 rounded-md border border-gray-200">
+        <div class="text-center py-4 text-gray-500">
+            <i class="fas fa-sync-alt fa-spin mr-2"></i> Loading recommendation...
+        </div>
+    </div>
+</div>
+
+<!-- Quick Add Options Form -->
+<div class="card mb-6">
+    <h3 class="text-xl font-semibold mb-4">Add New Option Position</h3>
+    <form id="add-option-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Symbol</label>
+            <input type="text" name="symbol" class="input" required placeholder="e.g., AAPL">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Option Type</label>
+            <select name="option_type" class="select" required>
+                <option value="call">Call</option>
+                <option value="put">Put</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Strike Price ($)</label>
+            <input type="number" name="strike" class="input" step="0.01" min="0.01" required placeholder="0.00">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Expiration Date</label>
+            <input type="date" name="expiration" class="input" required>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Position Type</label>
+            <select name="position_type" class="select" required>
+                <option value="long">Long</option>
+                <option value="short">Short</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Quantity (# of contracts)</label>
+            <input type="number" name="quantity" class="input" min="1" step="1" required value="1">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Price per Contract ($)</label>
+            <input type="number" name="price" class="input" step="0.01" min="0.01" required placeholder="0.00">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Delta</label>
+            <input type="number" name="delta" class="input" step="0.01" min="-1" max="1" required placeholder="0.50">
+            <small class="text-gray-500">Enter as decimal (e.g., 0.50 for 50 delta)</small>
+        </div>
+        
+        <div class="md:col-span-2 lg:col-span-3">
+            <button type="submit" class="btn btn-primary w-full md:w-auto">
+                <i class="fas fa-plus mr-2"></i> Add Option Position
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Quick Add Underlying Form -->
+<div class="card">
+    <h3 class="text-xl font-semibold mb-4">Add Underlying Position</h3>
+    <form id="add-underlying-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Symbol</label>
+            <input type="text" name="symbol" class="input" required placeholder="e.g., AAPL">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Position Type</label>
+            <select name="position_type" class="select" required>
+                <option value="long">Long</option>
+                <option value="short">Short</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Quantity (# of shares)</label>
+            <input type="number" name="quantity" class="input" min="1" step="1" required value="100">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Price per Share ($)</label>
+            <input type="number" name="price" class="input" step="0.01" min="0.01" required placeholder="0.00">
+        </div>
+        
+        <div class="md:col-span-2 lg:col-span-3">
+            <button type="submit" class="btn btn-primary w-full md:w-auto">
+                <i class="fas fa-plus mr-2"></i> Add Underlying Position
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const addOptionForm = document.getElementById('add-option-form');
+        const addUnderlyingForm = document.getElementById('add-underlying-form');
+        const recommendationContent = document.getElementById('recommendation-content');
+        
+        // Set default expiration date (1 month from now)
+        const expDateField = document.querySelector('input[name="expiration"]');
+        const nextMonth = new Date();
+        nextMonth.setMonth(nextMonth.getMonth() + 1);
+        expDateField.value = nextMonth.toISOString().split('T')[0];
+        
+        // Load hedge recommendation

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Delta Neutral Dashboard{% endblock %}</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        .nav-link {
+            @apply flex items-center px-4 py-2 text-gray-600 rounded transition-colors duration-200;
+        }
+        .nav-link:hover {
+            @apply bg-blue-50 text-blue-700;
+        }
+        .nav-link.active {
+            @apply bg-blue-600 text-white;
+        }
+        .nav-link.active:hover {
+            @apply bg-blue-700 text-white;
+        }
+        .card {
+            @apply bg-white rounded-lg shadow-md p-6 mb-4;
+        }
+        .btn {
+            @apply px-4 py-2 rounded-md font-medium transition-colors duration-200;
+        }
+        .btn-primary {
+            @apply bg-blue-600 text-white hover:bg-blue-700;
+        }
+        .btn-secondary {
+            @apply bg-gray-500 text-white hover:bg-gray-600;
+        }
+        .btn-success {
+            @apply bg-green-600 text-white hover:bg-green-700;
+        }
+        .btn-danger {
+            @apply bg-red-600 text-white hover:bg-red-700;
+        }
+        .btn-sm {
+            @apply px-2 py-1 text-sm;
+        }
+        .input {
+            @apply border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+        }
+        .select {
+            @apply border border-gray-300 rounded-md px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+        }
+        .badge {
+            @apply px-2 py-1 text-xs rounded-full font-medium;
+        }
+        .badge-success {
+            @apply bg-green-100 text-green-800;
+        }
+        .badge-warning {
+            @apply bg-yellow-100 text-yellow-800;
+        }
+        .badge-danger {
+            @apply bg-red-100 text-red-800;
+        }
+        
+        /* Toast notifications */
+        #toast-container {
+            @apply fixed top-4 right-4 z-50 flex flex-col gap-2;
+        }
+        .toast {
+            @apply rounded-md shadow-md p-4 flex items-start min-w-[300px] transition-all duration-300 transform translate-x-full;
+        }
+        .toast-success {
+            @apply bg-green-100 border-l-4 border-green-500 text-green-800;
+        }
+        .toast-error {
+            @apply bg-red-100 border-l-4 border-red-500 text-red-800;
+        }
+        .toast-info {
+            @apply bg-blue-100 border-l-4 border-blue-500 text-blue-800;
+        }
+        .toast.show {
+            @apply translate-x-0;
+        }
+    </style>
+    
+    {% block head %}{% endblock %}
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="flex">
+        <!-- Sidebar -->
+        <div class="w-64 bg-white h-screen shadow-md fixed">
+            <div class="p-4">
+                <h1 class="text-xl font-bold text-blue-700">Delta Neutral</h1>
+                <p class="text-sm text-gray-500">Portfolio Dashboard</p>
+            </div>
+            <nav class="mt-4">
+                <a href="{{ url_for('index') }}" class="nav-link {% if request.path == url_for('index') %}active{% endif %}">
+                    <i class="fas fa-home mr-2"></i> Dashboard
+                </a>
+                <a href="{{ url_for('positions') }}" class="nav-link {% if request.path == url_for('positions') %}active{% endif %}">
+                    <i class="fas fa-list mr-2"></i> Positions
+                </a>
+                <a href="{{ url_for('settings') }}" class="nav-link {% if request.path == url_for('settings') %}active{% endif %}">
+                    <i class="fas fa-cog mr-2"></i> Settings
+                </a>
+            </nav>
+        </div>
+        
+        <!-- Main content -->
+        <div class="ml-64 w-full">
+            <header class="bg-white shadow-sm p-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-semibold text-gray-700">{% block header %}{% endblock %}</h2>
+                    <div>
+                        <span id="last-updated" class="text-sm text-gray-500">
+                            <i class="fas fa-sync-alt mr-1"></i> Last updated: <span id="update-time">Never</span>
+                        </span>
+                    </div>
+                </div>
+            </header>
+            
+            <main class="p-6">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    
+    <!-- Toast container for notifications -->
+    <div id="toast-container"></div>
+    
+    <!-- Common JavaScript -->
+    <script>
+        // Toast notification system
+        function showToast(message, type = 'info', duration = 5000) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.classList.add('toast', `toast-${type}`);
+            
+            let icon = 'info-circle';
+            if (type === 'success') icon = 'check-circle';
+            if (type === 'error') icon = 'exclamation-circle';
+            
+            toast.innerHTML = `
+                <div class="flex">
+                    <div class="mr-3">
+                        <i class="fas fa-${icon}"></i>
+                    </div>
+                    <div class="flex-1">
+                        ${message}
+                    </div>
+                    <button class="ml-4 text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Show the toast with animation
+            setTimeout(() => {
+                toast.classList.add('show');
+            }, 10);
+            
+            // Close button
+            toast.querySelector('button').addEventListener('click', () => {
+                toast.classList.remove('show');
+                setTimeout(() => {
+                    container.removeChild(toast);
+                }, 300);
+            });
+            
+            // Auto close
+            if (duration > 0) {
+                setTimeout(() => {
+                    if (container.contains(toast)) {
+                        toast.classList.remove('show');
+                        setTimeout(() => {
+                            if (container.contains(toast)) {
+                                container.removeChild(toast);
+                            }
+                        }, 300);
+                    }
+                }, duration);
+            }
+        }
+        
+        // Format currency
+        function formatCurrency(value, currency = 'USD') {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: currency
+            }).format(value);
+        }
+        
+        // Format percentage
+        function formatPercent(value) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'percent',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(value / 100);
+        }
+        
+        // Format number
+        function formatNumber(value, decimals = 2) {
+            return new Intl.NumberFormat('en-US', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            }).format(value);
+        }
+        
+        // Update last updated timestamp
+        function updateLastUpdated() {
+            document.getElementById('update-time').textContent = new Date().toLocaleTimeString();
+        }
+        
+        // Call this when data is refreshed
+        document.addEventListener('DOMContentLoaded', function() {
+            updateLastUpdated();
+        });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>
